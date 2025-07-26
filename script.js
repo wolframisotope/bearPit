@@ -247,10 +247,10 @@ async function updateChart() {
             datasets: [{
                 label: 'Votes',
                 data: data,
-                backgroundColor: 'rgba(102, 126, 234, 0.6)',
-                borderColor: 'rgba(102, 126, 234, 1)',
+                backgroundColor: 'rgba(188, 106, 106, 0.7)',
+                borderColor: 'rgba(139, 69, 19, 0.8)',
                 borderWidth: 2,
-                borderRadius: 5,
+                borderRadius: 8,
                 borderSkipped: false,
             }]
         },
@@ -275,17 +275,35 @@ async function updateChart() {
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        stepSize: 1
+                        stepSize: 1,
+                        color: '#8B4513'
                     },
                     title: {
                         display: true,
-                        text: 'Number of Votes'
+                        text: 'Number of Votes',
+                        color: '#BC9A6A',
+                        font: {
+                            weight: 'bold'
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(210, 180, 140, 0.3)'
                     }
                 },
                 x: {
+                    ticks: {
+                        color: '#8B4513'
+                    },
                     title: {
                         display: true,
-                        text: 'UTC Time'
+                        text: 'UTC Time',
+                        color: '#BC9A6A',
+                        font: {
+                            weight: 'bold'
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(210, 180, 140, 0.3)'
                     }
                 }
             }
@@ -402,6 +420,13 @@ async function initializePoll() {
 async function resetPoll() {
     await initializePoll();
     localStorage.removeItem('utc-poll-voted');
+    location.reload();
+}
+
+// Reset only the local user's vote status
+function resetMyVote() {
+    localStorage.removeItem('utc-poll-voted');
+    console.log('Your vote has been reset. You can now vote again.');
     location.reload();
 }
 
