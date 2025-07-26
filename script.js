@@ -32,14 +32,18 @@ const timeSlots = [
 ];
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
     updateCurrentTime();
     setInterval(updateCurrentTime, 1000);
     generateTimeOptions();
-    loadPollData();
-    updateChart();
     setupShareLink();
     checkIfVoted();
+
+    // Test connection and initialize if needed
+    await testAndInitialize();
+
+    await loadPollData();
+    await updateChart();
 
     document.getElementById('poll-form').addEventListener('submit', handleVote);
 });
@@ -130,8 +134,11 @@ async function handleVote(e) {
 
 // Disable voting interface
 function disableVoting(buttonText) {
-    document.getElementById('vote-btn').disabled = true;
-    document.getElementById('vote-btn').textContent = buttonText;
+    const voteBtn = document.querySelector('.vote-btn');
+    if (voteBtn) {
+        voteBtn.disabled = true;
+        voteBtn.textContent = buttonText;
+    }
 
     document.querySelectorAll('.time-option').forEach(option => {
         option.style.pointerEvents = 'none';
@@ -142,17 +149,23 @@ function disableVoting(buttonText) {
 // Get poll data from shared storage
 async function getPollData() {
     try {
+        console.log(`Fetching data from bin: ${JSONBIN_BIN_ID}`);
         const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
             headers: {
                 'X-Master-Key': JSONBIN_API_KEY
             }
         });
 
+        console.log(`Response status: ${response.status}`);
+
         if (response.ok) {
             const result = await response.json();
+            console.log('Fetched data:', result);
             return result.record;
         } else {
-            throw new Error('Failed to fetch data');
+            const errorText = await response.text();
+            console.error(`API Error ${response.status}:`, errorText);
+            throw new Error(`Failed to fetch data: ${response.status} ${errorText}`);
         }
     } catch (error) {
         console.error('Error loading poll data:', error);
@@ -173,6 +186,7 @@ async function getPollData() {
 // Save poll data to shared storage
 async function savePollData(data) {
     try {
+        console.log(`Saving data to bin: ${JSONBIN_BIN_ID}`, data);
         const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
             method: 'PUT',
             headers: {
@@ -182,11 +196,17 @@ async function savePollData(data) {
             body: JSON.stringify(data)
         });
 
+        console.log(`Save response status: ${response.status}`);
+
         if (!response.ok) {
-            throw new Error('Failed to save data');
+            const errorText = await response.text();
+            console.error(`Save API Error ${response.status}:`, errorText);
+            throw new Error(`Failed to save data: ${response.status} ${errorText}`);
         }
 
-        return await response.json();
+        const result = await response.json();
+        console.log('Save successful:', result);
+        return result;
     } catch (error) {
         console.error('Error saving poll data:', error);
         throw error;
@@ -269,13 +289,21 @@ async function updateChart() {
 
 // Setup share link
 function setupShareLink() {
-    const shareUrl = window.location.href;
-    document.getElementById('share-url').value = shareUrl;
+    const shareInput = document.getElementById('share-url');
+    if (shareInput) {
+        const shareUrl = window.location.href;
+        shareInput.value = shareUrl;
+    }
 }
 
 // Copy share link to clipboard
 function copyLink() {
     const shareInput = document.getElementById('share-url');
+    if (!shareInput) {
+        showNotification('Share feature not available', 'error');
+        return;
+    }
+
     shareInput.select();
     shareInput.setSelectionRange(0, 99999); // For mobile devices
 
@@ -315,6 +343,29 @@ function showNotification(message, type = 'success') {
     }, 3000);
 }
 
+// Test connection and initialize if needed
+async function testAndInitialize() {
+    console.log('Testing JSONBin connection...');
+
+    try {
+        // Try to read the bin
+        const data = await getPollData();
+        console.log('Current poll data:', data);
+
+        // Check if data structure is valid
+        if (!data.votes || !data.hasOwnProperty('totalVotes')) {
+            console.log('Invalid data structure, initializing...');
+            await initializePoll();
+        } else {
+            console.log('Poll data is valid');
+        }
+    } catch (error) {
+        console.error('Connection test failed:', error);
+        console.log('Attempting to initialize poll...');
+        await initializePoll();
+    }
+}
+
 // Initialize shared storage (run this once to set up the bin)
 async function initializePoll() {
     const initialData = {
@@ -327,10 +378,14 @@ async function initializePoll() {
     });
 
     try {
+        console.log('Initializing poll with data:', initialData);
         await savePollData(initialData);
         console.log('Poll initialized successfully');
+        return initialData;
     } catch (error) {
         console.error('Failed to initialize poll:', error);
+        showNotification('Failed to connect to voting service', 'error');
+        throw error;
     }
 }
 
