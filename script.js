@@ -1,10 +1,10 @@
-// Poll data and configuration
-const JSONBIN_BIN_ID = '6884adecae596e708fbc030d'; // Replace with your bin ID
-const JSONBIN_API_KEY = '$2a$10$GEtAM2HEj5cTZA9NJ/snY.N6iBdWmzH2k.Dd2bF/paO4DhaenkgbG'; // Replace with your API key
-const USE_FALLBACK = false; // Set to true to use localStorage instead of JSONBin for testing
+// Poll data and config
+const JSONBIN_BIN_ID = '6884adecae596e708fbc030d';
+const JSONBIN_API_KEY = '$2a$10$GEtAM2HEj5cTZA9NJ/snY.N6iBdWmzH2k.Dd2bF/paO4DhaenkgbG';
+const USE_FALLBACK = false; // Set to true to use localStorage
 let chart = null;
 
-// Time slots (24 hours in UTC)
+// Time slots in UTC
 const timeSlots = [
     { time: '00:00' },
     { time: '01:00' },
@@ -37,7 +37,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     updateCurrentTime();
     setInterval(updateCurrentTime, 1000);
     generateTimeOptions();
-    setupShareLink();
     checkIfVoted();
 
     // Test connection and initialize if needed
@@ -312,34 +311,6 @@ async function updateChart() {
 
     // Update total votes display
     document.getElementById('total-votes').textContent = pollData.totalVotes || 0;
-}
-
-// Setup share link
-function setupShareLink() {
-    const shareInput = document.getElementById('share-url');
-    if (shareInput) {
-        const shareUrl = window.location.href;
-        shareInput.value = shareUrl;
-    }
-}
-
-// Copy share link to clipboard
-function copyLink() {
-    const shareInput = document.getElementById('share-url');
-    if (!shareInput) {
-        showNotification('Share feature not available', 'error');
-        return;
-    }
-
-    shareInput.select();
-    shareInput.setSelectionRange(0, 99999); // For mobile devices
-
-    try {
-        document.execCommand('copy');
-        showNotification('Link copied to clipboard!');
-    } catch (err) {
-        showNotification('Failed to copy link. Please copy manually.', 'error');
-    }
 }
 
 // Show notification
