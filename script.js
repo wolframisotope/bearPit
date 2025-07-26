@@ -1,6 +1,7 @@
 // Poll data and configuration
 const JSONBIN_BIN_ID = '6884adecae596e708fbc030d'; // Replace with your bin ID
 const JSONBIN_API_KEY = '$2a$10$GEtAM2HEj5cTZA9NJ/snY.N6iBdWmzH2k.Dd2bF/paO4DhaenkgbG'; // Replace with your API key
+const USE_FALLBACK = false; // Set to true to use localStorage instead of JSONBin for testing
 let chart = null;
 
 // Time slots (24 hours in UTC)
@@ -148,6 +149,10 @@ function disableVoting(buttonText) {
 
 // Get poll data from shared storage
 async function getPollData() {
+    if (USE_FALLBACK) {
+        return getFallbackData();
+    }
+
     try {
         console.log(`Fetching data from bin: ${JSONBIN_BIN_ID}`);
         const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
@@ -185,6 +190,10 @@ async function getPollData() {
 
 // Save poll data to shared storage
 async function savePollData(data) {
+    if (USE_FALLBACK) {
+        return saveFallbackData(data);
+    }
+
     try {
         console.log(`Saving data to bin: ${JSONBIN_BIN_ID}`, data);
         const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
@@ -394,4 +403,54 @@ async function resetPoll() {
     await initializePoll();
     localStorage.removeItem('utc-poll-voted');
     location.reload();
+}
+
+// Fallback functions using localStorage
+function getFallbackData() {
+    const data = localStorage.getItem('poll-shared-data');
+    if (data) {
+        console.log('Using fallback data:', JSON.parse(data));
+        return JSON.parse(data);
+    }
+
+    const defaultData = {
+        votes: {},
+        totalVotes: 0
+    };
+
+    timeSlots.forEach(slot => {
+        defaultData.votes[slot.time] = 0;
+    });
+
+    return defaultData;
+}
+
+function saveFallbackData(data) {
+    console.log('Saving fallback data:', data);
+    localStorage.setItem('poll-shared-data', JSON.stringify(data));
+    return Promise.resolve({ success: true });
+}
+
+// Manual test function - call this in console to test API
+async function testAPI() {
+    console.log('=== API Test Start ===');
+    console.log('Bin ID:', JSONBIN_BIN_ID);
+    console.log('API Key:', JSONBIN_API_KEY.substring(0, 10) + '...');
+
+    try {
+        console.log('Testing READ...');
+        const data = await getPollData();
+        console.log('READ Success:', data);
+
+        console.log('Testing WRITE...');
+        const testData = { votes: { "00:00": 1 }, totalVotes: 1 };
+        const result = await savePollData(testData);
+        console.log('WRITE Success:', result);
+
+        console.log('=== API Test Complete ===');
+        return true;
+    } catch (error) {
+        console.error('=== API Test Failed ===', error);
+        return false;
+    }
 } 
